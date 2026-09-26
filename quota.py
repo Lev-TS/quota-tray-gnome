@@ -2,6 +2,8 @@
 """Read quota for independently logged-in Codex and Claude Code accounts."""
 
 import argparse
+import base64
+import binascii
 import json
 import os
 from pathlib import Path
@@ -33,7 +35,13 @@ def read_accounts():
         path = item.get("path")
         if not isinstance(label, str) or not label.strip() or not isinstance(path, str) or not path:
             raise ValueError("Each account needs a label and path")
-        accounts.append({"provider": item["provider"], "label": label.strip(), "path": str(Path(path).expanduser())})
+        account = {"provider": item["provider"], "label": label.strip(), "path": str(Path(path).expanduser())}
+        email = item.get("email")
+        if email is not None:
+            if not isinstance(email, str) or "@" not in email:
+                raise ValueError("An account email must be a valid email address")
+            account["email"] = email
+        accounts.append(account)
     return accounts
 
 
@@ -58,6 +66,38 @@ def reset_time(value):
 
 def percentage(value):
     return max(0.0, min(100.0, float(value)))
+
+
+def codex_email(path):
+    """Read the email claim from this CLI account's cached identity token."""
+    try:
+        token = json.loads((Path(path) / "auth.json").read_text())["tokens"]["id_token"]
+        payload = token.split(".")[1]
+        claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+        email = claims.get("email")
+        return email if isinstance(email, str) and "@" in email else None
+    except (OSError, ValueError, KeyError, IndexError, binascii.Error):
+        return None
+
+
+def claude_email(path):
+    """Ask Claude Code which account is signed into this config directory."""
+    env = os.environ.copy()
+    if Path(path).resolve() == (Path.home() / ".claude").resolve():
+        env.pop("CLAUDE_CONFIG_DIR", None)
+    else:
+        env["CLAUDE_CONFIG_DIR"] = path
+    claude = shutil.which("claude") or str(Path.home() / ".local" / "bin" / "claude")
+    try:
+        status = subprocess.run([claude, "auth", "status", "--json"], env=env,
+                                capture_output=True, text=True, timeout=8, check=True)
+        data = json.loads(status.stdout)
+        email = data.get("email")
+        if data.get("loggedIn") and isinstance(email, str) and "@" in email:
+            return email
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    return None
 
 
 def codex_usage(path):
@@ -166,6 +206,9 @@ def poll():
     result = []
     for account in accounts:
         entry = {"provider": account["provider"], "label": account["label"]}
+        email = account.get("email") or (codex_email if account["provider"] == "codex" else claude_email)(account["path"])
+        if email:
+            entry["email"] = email
         try:
             entry["windows"] = (codex_usage if account["provider"] == "codex" else claude_usage)(account["path"])
         except (OSError, ValueError, TimeoutError, json.JSONDecodeError) as error:
@@ -183,6 +226,7 @@ def main():
     add.add_argument("provider", choices=PROVIDERS)
     add.add_argument("label")
     add.add_argument("path", help="CLI config directory containing auth.json or .credentials.json")
+    add.add_argument("--email", help="Optional display email when the CLI does not report it")
     remove = subcommands.add_parser("remove")
     remove.add_argument("provider", choices=PROVIDERS)
     remove.add_argument("label")
@@ -200,7 +244,12 @@ def main():
             parser.error(f"Not a directory: {path}")
         if any(a["provider"] == args.provider and a["label"] == args.label for a in accounts):
             parser.error("That provider and label already exist")
-        accounts.append({"provider": args.provider, "label": args.label, "path": path})
+        account = {"provider": args.provider, "label": args.label, "path": path}
+        if args.email:
+            if "@" not in args.email:
+                parser.error("Email must contain @")
+            account["email"] = args.email
+        accounts.append(account)
         write_accounts(accounts)
     else:
         updated = [a for a in accounts if (a["provider"], a["label"]) != (args.provider, args.label)]

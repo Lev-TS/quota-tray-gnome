@@ -1,0 +1,134 @@
+.quota-menu {
+    min-width: 340px;
+    background-color: #151a20;
+    color: #f7f7f5;
+    border-radius: 14px;
+    padding: 5px 0;
+}
+
+.quota-header-item, .quota-card-item {
+    padding: 4px 12px;
+}
+
+.quota-header {
+    padding: 9px 4px 7px;
+    spacing: 3px;
+}
+
+.quota-title {
+    color: #f7f7f5;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.quota-subtitle {
+    color: #9ca3af;
+    font-size: 11px;
+}
+
+.quota-card {
+    min-width: 292px;
+    background-color: #20242b;
+    border: 1px solid #303640;
+    border-radius: 15px;
+    padding: 14px;
+    spacing: 13px;
+}
+
+.quota-card-codex {
+    border-color: #374d49;
+}
+
+.quota-card-claude {
+    border-color: #624436;
+}
+
+.quota-account-heading {
+    spacing: 11px;
+}
+
+.quota-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background-color: #111714;
+}
+
+.quota-badge-codex {
+    background-color: #101c19;
+}
+
+.quota-badge-claude {
+    background-color: #39241e;
+}
+
+.quota-identity {
+    spacing: 2px;
+}
+
+.quota-account-title {
+    color: #f7f7f5;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.quota-email {
+    color: #a8afb6;
+    font-size: 11px;
+}
+
+.quota-window {
+    spacing: 5px;
+}
+
+.quota-window-name {
+    color: #c8cdd1;
+    font-size: 12px;
+}
+
+.quota-window-value {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.quota-value-high { color: #8dd5bc; }
+.quota-value-medium { color: #f0c67e; }
+.quota-value-low { color: #ef9d91; }
+
+.quota-track {
+    width: 264px;
+    height: 7px;
+    border-radius: 4px;
+    background-color: #363d47;
+}
+
+.quota-fill {
+    height: 7px;
+    border-radius: 4px;
+}
+
+.quota-fill-high { background-color: #8dd5bc; }
+.quota-fill-medium { background-color: #f0c67e; }
+.quota-fill-low { background-color: #ef9d91; }
+
+.quota-reset {
+    color: #8e969e;
+    font-size: 10px;
+}
+
+.quota-error {
+    color: #ef9d91;
+    font-size: 11px;
+}
+
+.quota-message {
+    color: #c8cdd1;
+    padding: 14px 4px;
+}
+
+.quota-footer {
+    color: #a8afb6;
+    border-top: 1px solid #303640;
+    font-size: 12px;
+    margin-top: 5px;
+}

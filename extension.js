@@ -16,9 +16,8 @@ export default class QuotaTray extends Extension {
         const box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
         const icon = Gio.File.new_for_path(GLib.build_filenamev([this.path, 'quota-symbolic.svg']));
         box.add_child(new St.Icon({gicon: new Gio.FileIcon({file: icon}), style_class: 'system-status-icon'}));
-        this._label = new St.Label({text: 'AI …', y_align: Clutter.ActorAlign.CENTER});
-        box.add_child(this._label);
         this._indicator.add_child(box);
+        this._indicator.menu.box.add_style_class_name('quota-menu');
         Main.panel.addToStatusArea(this.uuid, this._indicator);
         this._indicator.menu.connect('open-state-changed', (_menu, open) => {
             if (open && GLib.get_monotonic_time() - (this._lastRefresh ?? 0) >= REFRESH_SECONDS * 1000000)
@@ -39,7 +38,6 @@ export default class QuotaTray extends Extension {
         }
         this._indicator?.destroy();
         this._indicator = null;
-        this._label = null;
     }
 
     _refresh() {
@@ -71,53 +69,112 @@ export default class QuotaTray extends Extension {
     }
 
     _showError(message) {
-        this._label.text = 'AI !';
         this._indicator.menu.removeAll();
-        const item = new PopupMenu.PopupMenuItem(message, {reactive: false});
-        this._indicator.menu.addMenuItem(item);
+        this._addHeader('Quota Tray', 'Could not update usage');
+        this._addMessage(message);
         this._addFooter();
+    }
+
+    _asset(name) {
+        return new Gio.FileIcon({file: Gio.File.new_for_path(GLib.build_filenamev([this.path, name]))});
+    }
+
+    _text(value, style) {
+        return new St.Label({text: value, style_class: style, y_align: Clutter.ActorAlign.CENTER});
+    }
+
+    _row(left, right, style = '') {
+        const row = new St.BoxLayout({style_class: style, x_expand: true});
+        left.x_expand = true;
+        row.add_child(left);
+        row.add_child(right);
+        return row;
+    }
+
+    _addHeader(title, subtitle) {
+        const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        item.add_style_class_name('quota-header-item');
+        const content = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'quota-header'});
+        content.add_child(this._text(title, 'quota-title'));
+        content.add_child(this._text(subtitle, 'quota-subtitle'));
+        item.add_child(content);
+        this._indicator.menu.addMenuItem(item);
+    }
+
+    _addMessage(message) {
+        const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        item.add_style_class_name('quota-card-item');
+        item.add_child(this._text(message, 'quota-message'));
+        this._indicator.menu.addMenuItem(item);
+    }
+
+    _addMeter(card, window) {
+        const remaining = Math.max(0, Math.min(100, 100 - window.used));
+        const tone = remaining < 20 ? 'low' : remaining < 50 ? 'medium' : 'high';
+        const meter = new St.BoxLayout({vertical: true, style_class: 'quota-window'});
+        const name = window.name.replace(/^codex\s+/i, '');
+        meter.add_child(this._row(
+            this._text(name, 'quota-window-name'),
+            this._text(`${Math.round(remaining)}% left`, `quota-window-value quota-value-${tone}`),
+            'quota-window-heading'));
+        const track = new St.BoxLayout({style_class: 'quota-track'});
+        track.add_child(new St.Widget({style_class: `quota-fill quota-fill-${tone}`, width: 2.64 * remaining}));
+        track.add_child(new St.Widget({width: 2.64 * (100 - remaining)}));
+        meter.add_child(track);
+        if (window.reset)
+            meter.add_child(this._text(`Resets ${window.reset}`, 'quota-reset'));
+        card.add_child(meter);
+    }
+
+    _addAccount(account) {
+        const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        item.add_style_class_name('quota-card-item');
+        const card = new St.BoxLayout({vertical: true, x_expand: true,
+            style_class: `quota-card quota-card-${account.provider}`});
+        const heading = new St.BoxLayout({style_class: 'quota-account-heading'});
+        const badge = new St.Bin({style_class: `quota-badge quota-badge-${account.provider}`,
+            x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER});
+        badge.set_child(new St.Icon({gicon: this._asset(account.provider === 'codex' ?
+            'codex-logo.svg' : 'claude-logo.svg'), icon_size: 20}));
+        heading.add_child(badge);
+        const identity = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'quota-identity'});
+        const provider = account.provider === 'codex' ? 'Codex' : 'Claude';
+        identity.add_child(this._text(`${provider} · ${account.label}`, 'quota-account-title'));
+        if (account.email)
+            identity.add_child(this._text(account.email, 'quota-email'));
+        heading.add_child(identity);
+        card.add_child(heading);
+
+        if (account.error) {
+            card.add_child(this._text(account.error, 'quota-error'));
+        } else if (!(account.windows ?? []).length) {
+            card.add_child(this._text('No quota windows returned', 'quota-error'));
+        } else {
+            for (const window of account.windows)
+                this._addMeter(card, window);
+        }
+        item.add_child(card);
+        this._indicator.menu.addMenuItem(item);
     }
 
     _render(result) {
         this._indicator.menu.removeAll();
         const accounts = result.accounts ?? [];
+        const checked = GLib.DateTime.new_now_local().format('%H:%M');
+        this._addHeader('Quota Tray', `${accounts.length} ${accounts.length === 1 ? 'account' : 'accounts'} · updated ${checked}`);
         if (accounts.length === 0) {
-            this._label.text = 'AI +';
-            this._indicator.menu.addMenuItem(new PopupMenu.PopupMenuItem(
-                'Add a Codex or Claude account with quota.py add', {reactive: false}));
+            this._addMessage('Add an account with quota.py add');
             this._addFooter();
             return;
         }
-
-        const summaries = [];
-        for (const account of accounts) {
-            const name = `${account.provider === 'codex' ? 'C' : 'A'} ${account.label}`;
-            const windows = account.windows ?? [];
-            const remaining = windows.length ? Math.min(...windows.map(w => Math.max(0, 100 - w.used))) : null;
-            summaries.push(`${name} ${remaining === null ? '!' : `${Math.round(remaining)}%`}`);
-            const section = new PopupMenu.PopupMenuSection();
-            section.addMenuItem(new PopupMenu.PopupMenuItem(name, {reactive: false}));
-            if (account.error) {
-                section.addMenuItem(new PopupMenu.PopupMenuItem(account.error, {reactive: false}));
-            } else if (windows.length === 0) {
-                section.addMenuItem(new PopupMenu.PopupMenuItem('No quota windows returned', {reactive: false}));
-            } else {
-                for (const window of windows) {
-                    const reset = window.reset ? ` · resets ${window.reset}` : '';
-                    section.addMenuItem(new PopupMenu.PopupMenuItem(
-                        `${window.name}: ${Math.round(100 - window.used)}% left${reset}`,
-                        {reactive: false}));
-                }
-            }
-            this._indicator.menu.addMenuItem(section);
-            this._indicator.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        }
-        this._label.text = summaries.join('  ');
+        for (const account of accounts)
+            this._addAccount(account);
         this._addFooter();
     }
 
     _addFooter() {
         const refresh = new PopupMenu.PopupMenuItem('Refresh now');
+        refresh.add_style_class_name('quota-footer');
         refresh.connect('activate', () => this._refresh());
         this._indicator.menu.addMenuItem(refresh);
     }
