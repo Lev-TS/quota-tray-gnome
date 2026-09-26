@@ -1,6 +1,6 @@
 # Quota Tray
 
-A GNOME Shell 50 top bar extension for multiple Codex and Claude Code subscriptions. Each account has its own CLI config directory. The top bar has a single icon. Click it to see provider cards with each account's quota windows, remaining percentage, and reset time.
+A GNOME Shell 50 top bar extension for multiple Codex and Claude Code subscriptions. Each account has its own CLI config directory. The top bar shows the selected provider's icon and its 5h remaining percentage. Click it to see provider cards with each account's quota windows, remaining percentage, and reset time. Click a card to choose which account appears in the top bar. The choice is saved in `~/.config/quota-tray/selection.json`.
 
 Quota Tray reads Codex usage through `codex app-server` and Claude usage through the Claude Code OAuth usage endpoint. The account list stores labels and config paths only. It does not copy tokens or change your active CLI account. Codex may refresh its own login while the app server runs. Claude tokens refresh when you use Claude Code in that account's config directory.
 
@@ -51,4 +51,4 @@ gnome-extensions pack --extra-source=quota.py --extra-source=quota-symbolic.svg 
   --extra-source=codex-logo.svg --extra-source=claude-logo.svg .
 ```
 
-The Codex mark comes from [Lobe Icons](https://github.com/lobehub/lobe-icons), with its monochrome fill set to white for the dark card. The Claude mark comes from the installed Anthropic Claude Code VS Code extension. They identify providers in account cards; Quota Tray uses its own gauge icon in the top bar. The card layout takes cues from [compact activity cards](https://dribbble.com/shots/26677688-UI-cards) and an [AI usage widget](https://dribbble.com/shots/27698368-Design-Case-Study-6-AI-Usage-Widget-Limits-That-Live-on-Your) on Dribbble.
+The Codex mark comes from [Lobe Icons](https://github.com/lobehub/lobe-icons), with its monochrome fill set to white for the dark card. The Claude mark comes from the installed Anthropic Claude Code VS Code extension. They identify providers in account cards and the top bar. The card layout takes cues from [compact activity cards](https://dribbble.com/shots/26677688-UI-cards) and an [AI usage widget](https://dribbble.com/shots/27698368-Design-Case-Study-6-AI-Usage-Widget-Limits-That-Live-on-Your) on Dribbble.

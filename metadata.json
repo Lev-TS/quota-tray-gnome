@@ -3,5 +3,5 @@
   "name": "Quota Tray",
   "description": "Codex and Claude Code usage for multiple CLI accounts",
   "shell-version": ["50"],
-  "version": 2
+  "version": 3
 }
