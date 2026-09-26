@@ -13,6 +13,7 @@ const REFRESH_SECONDS = 300;
 export default class QuotaTray extends Extension {
     enable() {
         this._generation = 0;
+        this._resetLabels = [];
         this._selectedAccount = this._readSelection();
         this._indicator = new PanelMenu.Button(0.0, 'Quota Tray');
         const box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
@@ -25,12 +26,19 @@ export default class QuotaTray extends Extension {
         this._indicator.menu.box.add_style_class_name('quota-menu');
         Main.panel.addToStatusArea(this.uuid, this._indicator);
         this._indicator.menu.connect('open-state-changed', (_menu, open) => {
-            if (open && GLib.get_monotonic_time() - (this._lastRefresh ?? 0) >= REFRESH_SECONDS * 1000000)
-                this._refresh();
+            if (open) {
+                this._updateResetLabels();
+                if (GLib.get_monotonic_time() - (this._lastRefresh ?? 0) >= REFRESH_SECONDS * 1000000)
+                    this._refresh();
+            }
         });
         this._refresh();
         this._timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, REFRESH_SECONDS, () => {
             this._refresh();
+            return GLib.SOURCE_CONTINUE;
+        });
+        this._countdownTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 30, () => {
+            this._updateResetLabels();
             return GLib.SOURCE_CONTINUE;
         });
     }
@@ -41,6 +49,11 @@ export default class QuotaTray extends Extension {
             GLib.Source.remove(this._timer);
             this._timer = null;
         }
+        if (this._countdownTimer) {
+            GLib.Source.remove(this._countdownTimer);
+            this._countdownTimer = null;
+        }
+        this._resetLabels = [];
         this._indicator?.destroy();
         this._indicator = null;
     }
@@ -74,6 +87,7 @@ export default class QuotaTray extends Extension {
     }
 
     _showError(message) {
+        this._resetLabels = [];
         this._panelValue.text = '—';
         this._indicator.accessible_name = 'Quota Tray: usage unavailable';
         this._indicator.menu.removeAll();
@@ -177,9 +191,27 @@ export default class QuotaTray extends Extension {
         const track = new St.DrawingArea({style_class: 'quota-track'});
         track.connect('repaint', area => paintMeter(area, remaining, tone));
         meter.add_child(track);
-        if (window.reset)
+        if (/(?:^|\s)5h$/i.test(window.name) && Number.isFinite(window.resetAt)) {
+            const label = this._text('', 'quota-reset');
+            this._resetLabels.push({label, resetAt: window.resetAt});
+            meter.add_child(label);
+        } else if (window.reset) {
             meter.add_child(this._text(`Resets ${window.reset}`, 'quota-reset'));
+        }
         card.add_child(meter);
+    }
+
+    _updateResetLabels() {
+        const now = Date.now() / 1000;
+        for (const {label, resetAt} of this._resetLabels) {
+            const minutes = Math.ceil((resetAt - now) / 60);
+            if (minutes <= 0)
+                label.text = 'Reset due';
+            else if (minutes < 60)
+                label.text = `Resets in ${minutes}m`;
+            else
+                label.text = `Resets in ${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+        }
     }
 
     _addAccount(account) {
@@ -222,6 +254,7 @@ export default class QuotaTray extends Extension {
 
     _render(result) {
         this._lastResult = result;
+        this._resetLabels = [];
         this._indicator.menu.removeAll();
         const accounts = result.accounts ?? [];
         this._updatePanel(accounts);
@@ -234,6 +267,7 @@ export default class QuotaTray extends Extension {
         }
         for (const account of accounts)
             this._addAccount(account);
+        this._updateResetLabels();
         this._addFooter();
     }
 

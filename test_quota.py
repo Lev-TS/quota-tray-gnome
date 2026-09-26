@@ -53,7 +53,13 @@ class QuotaTests(unittest.TestCase):
             self.assertEqual([w["name"] for w in windows], ["5h", "weekly"])
             self.assertEqual([w["used"] for w in windows], [12.5, 31])
             self.assertIsNotNone(windows[0]["reset"])
+            self.assertEqual(windows[0]["resetAt"], 1790445600)
             self.assertEqual(fetch.call_args.args[0].full_url, "https://api.anthropic.com/api/oauth/usage")
+
+    def test_reset_timestamp_accepts_codex_epoch_and_claude_iso(self):
+        self.assertEqual(quota.reset_timestamp(1790445600), 1790445600)
+        self.assertEqual(quota.reset_timestamp("2026-09-26T18:00:00Z"), 1790445600)
+        self.assertIsNone(quota.reset_timestamp("not a date"))
 
     def test_invalid_config_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

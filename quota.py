@@ -53,14 +53,24 @@ def write_accounts(accounts):
     temporary.replace(CONFIG)
 
 
-def reset_time(value):
+def reset_timestamp(value):
     if value is None:
         return None
     try:
         if isinstance(value, (int, float)):
-            return datetime.fromtimestamp(value).astimezone().strftime("%a %H:%M")
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone().strftime("%a %H:%M")
-    except (ValueError, OSError, TypeError):
+            return int(value)
+        return int(datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp())
+    except (AttributeError, OverflowError, ValueError, OSError, TypeError):
+        return None
+
+
+def reset_time(value):
+    timestamp = reset_timestamp(value)
+    if timestamp is None:
+        return None
+    try:
+        return datetime.fromtimestamp(timestamp).astimezone().strftime("%a %H:%M")
+    except (OverflowError, ValueError, OSError):
         return None
 
 
@@ -158,7 +168,9 @@ def codex_usage(path):
                     else:
                         window_name = key
                     windows.append({"name": f"{snapshot.get('limitName') or name} {window_name}",
-                                    "used": percentage(window["usedPercent"]), "reset": reset_time(window.get("resetsAt"))})
+                                    "used": percentage(window["usedPercent"]),
+                                    "reset": reset_time(window.get("resetsAt")),
+                                    "resetAt": reset_timestamp(window.get("resetsAt"))})
         return windows
     finally:
         process.terminate()
@@ -197,7 +209,8 @@ def claude_usage(path):
         window = data.get(key)
         if isinstance(window, dict) and window.get("utilization") is not None:
             windows.append({"name": label, "used": percentage(window["utilization"]),
-                            "reset": reset_time(window.get("resets_at"))})
+                            "reset": reset_time(window.get("resets_at")),
+                            "resetAt": reset_timestamp(window.get("resets_at"))})
     return windows
 
 

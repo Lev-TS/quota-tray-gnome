@@ -1,6 +1,6 @@
 # Quota Tray
 
-A GNOME Shell 50 top bar extension for multiple Codex and Claude Code subscriptions. Each account has its own CLI config directory. The top bar shows the selected provider's icon and its 5h remaining percentage. Click it to see provider cards with each account's quota windows, remaining percentage, and reset time. Click a card to choose which account appears in the top bar. The choice is saved in `~/.config/quota-tray/selection.json`.
+A GNOME Shell 50 top bar extension for multiple Codex and Claude Code subscriptions. Each account has its own CLI config directory. The top bar shows the selected provider's icon and its 5h remaining percentage. Click it to see provider cards with each account's quota windows and remaining percentage. A live reset countdown appears below each 5h meter. Weekly meters show the reset day and time. Click a card to choose which account appears in the top bar. The choice is saved in `~/.config/quota-tray/selection.json`.
 
 Quota Tray reads Codex usage through `codex app-server` and Claude usage through the Claude Code OAuth usage endpoint. The account list stores labels and config paths only. It does not copy tokens or change your active CLI account. Codex may refresh its own login while the app server runs. Claude tokens refresh when you use Claude Code in that account's config directory.
 
@@ -40,7 +40,7 @@ Run `python3 quota.py list` to see configured accounts and `python3 quota.py rem
 
 The Codex login must use file-based credentials. In its `config.toml`, set `cli_auth_credentials_store = "file"` before logging in if that account otherwise uses the OS keyring. API-key accounts do not have subscription quota windows.
 
-Claude usage requests may receive a 429 response. Quota Tray then shows an error for that account and tries again at the next refresh. It polls every five minutes. Opening the menu refreshes stale data, and the menu also has a manual refresh action.
+Claude usage requests may receive a 429 response. Quota Tray then shows an error for that account and tries again at the next refresh. It polls every five minutes. The 5h countdown updates every 30 seconds without polling the providers. Opening the menu refreshes stale data, and the menu also has a manual refresh action.
 
 ## Package
 
