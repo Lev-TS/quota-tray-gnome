@@ -165,6 +165,11 @@
     background-color: #2a3038;
 }
 
+.quota-footer-button-disabled, .quota-footer-button-disabled:hover {
+    background-color: transparent;
+    color: #68727c;
+}
+
 .quota-footer-content {
     spacing: 8px;
     color: #a8afb6;

@@ -59,6 +59,10 @@ export default class QuotaTray extends Extension {
     }
 
     _refresh() {
+        if (this._refreshing)
+            return;
+        this._refreshing = true;
+        this._updateRefreshButton();
         this._lastRefresh = GLib.get_monotonic_time();
         const generation = ++this._generation;
         const helper = GLib.build_filenamev([this.path, 'quota.py']);
@@ -69,12 +73,15 @@ export default class QuotaTray extends Extension {
         try {
             process.init(null);
         } catch (error) {
+            this._refreshing = false;
+            this._updateRefreshButton();
             this._showError(`Could not start quota reader: ${error.message}`);
             return;
         }
         process.communicate_utf8_async(null, null, (source, result) => {
             if (generation !== this._generation || !this._indicator)
                 return;
+            this._refreshing = false;
             try {
                 const [, stdout, stderr] = source.communicate_utf8_finish(result);
                 if (!source.get_successful())
@@ -83,6 +90,7 @@ export default class QuotaTray extends Extension {
             } catch (error) {
                 this._showError(error.message);
             }
+            this._updateRefreshButton();
         });
     }
 
@@ -271,16 +279,31 @@ export default class QuotaTray extends Extension {
         this._addFooter();
     }
 
+    _updateRefreshButton() {
+        if (!this._refreshButton || !this._refreshLabel)
+            return;
+        this._refreshButton.reactive = !this._refreshing;
+        this._refreshButton.can_focus = !this._refreshing;
+        this._refreshButton.accessible_name = this._refreshing ? 'Refreshing quota' : 'Refresh quota now';
+        this._refreshLabel.text = this._refreshing ? 'Refreshing…' : 'Refresh now';
+        if (this._refreshing)
+            this._refreshButton.add_style_class_name('quota-footer-button-disabled');
+        else
+            this._refreshButton.remove_style_class_name('quota-footer-button-disabled');
+    }
+
     _addFooter() {
         const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
         item.add_style_class_name('quota-card-item');
         const content = new St.BoxLayout({style_class: 'quota-footer-content'});
         content.add_child(new St.Icon({icon_name: 'view-refresh-symbolic', icon_size: 14}));
-        content.add_child(this._text('Refresh now', 'quota-footer-label'));
-        const button = new St.Button({style_class: 'quota-footer-button', child: content,
+        this._refreshLabel = this._text('Refresh now', 'quota-footer-label');
+        content.add_child(this._refreshLabel);
+        this._refreshButton = new St.Button({style_class: 'quota-footer-button', child: content,
             accessible_name: 'Refresh quota now'});
-        button.connect('clicked', () => this._refresh());
-        item.add_child(button);
+        this._refreshButton.connect('clicked', () => this._refresh());
+        this._updateRefreshButton();
+        item.add_child(this._refreshButton);
         this._indicator.menu.addMenuItem(item);
     }
 }
