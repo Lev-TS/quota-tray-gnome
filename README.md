@@ -47,7 +47,7 @@ Claude usage requests may receive a 429 response. Quota Tray then shows an error
 To make a standalone ZIP that includes the reader and icons, run:
 
 ```sh
-gnome-extensions pack --extra-source=quota.py --extra-source=quota-symbolic.svg \
+gnome-extensions pack --extra-source=quota.py --extra-source=meter.js --extra-source=quota-symbolic.svg \
   --extra-source=codex-logo.svg --extra-source=claude-logo.svg .
 ```
 

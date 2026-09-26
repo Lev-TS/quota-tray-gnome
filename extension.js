@@ -6,6 +6,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {paintMeter} from './meter.js';
 
 const REFRESH_SECONDS = 300;
 
@@ -165,18 +166,16 @@ export default class QuotaTray extends Extension {
     }
 
     _addMeter(card, window) {
-        const remaining = Math.max(0, Math.min(100, 100 - window.used));
+        const remaining = Math.round(Math.max(0, Math.min(100, 100 - window.used)));
         const tone = remaining < 20 ? 'low' : remaining < 50 ? 'medium' : 'high';
         const meter = new St.BoxLayout({vertical: true, style_class: 'quota-window'});
         const name = window.name.replace(/^codex\s+/i, '');
         meter.add_child(this._row(
             this._text(name, 'quota-window-name'),
-            this._text(`${Math.round(remaining)}% left`, `quota-window-value quota-value-${tone}`),
+            this._text(`${remaining}% left`, `quota-window-value quota-value-${tone}`),
             'quota-window-heading'));
-        const track = new St.BoxLayout({style_class: 'quota-track'});
-        track.add_child(new St.Widget({style_class: `quota-fill quota-fill-${tone}`,
-            style: `width: ${2.64 * remaining}px;`}));
-        track.add_child(new St.Widget({style: `width: ${2.64 * (100 - remaining)}px;`}));
+        const track = new St.DrawingArea({style_class: 'quota-track'});
+        track.connect('repaint', area => paintMeter(area, remaining, tone));
         meter.add_child(track);
         if (window.reset)
             meter.add_child(this._text(`Resets ${window.reset}`, 'quota-reset'));

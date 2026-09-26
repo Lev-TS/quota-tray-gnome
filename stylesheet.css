@@ -136,18 +136,7 @@
 .quota-track {
     width: 264px;
     height: 7px;
-    border-radius: 4px;
-    background-color: #363d47;
 }
-
-.quota-fill {
-    height: 7px;
-    border-radius: 4px;
-}
-
-.quota-fill-high { background-color: #8dd5bc; }
-.quota-fill-medium { background-color: #f0c67e; }
-.quota-fill-low { background-color: #ef9d91; }
 
 .quota-reset {
     color: #8e969e;
