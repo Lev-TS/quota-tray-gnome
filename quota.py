@@ -41,6 +41,11 @@ def read_accounts():
             if not isinstance(email, str) or "@" not in email:
                 raise ValueError("An account email must be a valid email address")
             account["email"] = email
+        plan = item.get("plan")
+        if plan is not None:
+            if not isinstance(plan, str) or not plan.strip():
+                raise ValueError("An account plan must be a non-empty string")
+            account["plan"] = plan.strip()
         accounts.append(account)
     return accounts
 
@@ -219,6 +224,8 @@ def poll():
     result = []
     for account in accounts:
         entry = {"provider": account["provider"], "label": account["label"]}
+        if account.get("plan"):
+            entry["plan"] = account["plan"]
         email = account.get("email") or (codex_email if account["provider"] == "codex" else claude_email)(account["path"])
         if email:
             entry["email"] = email
@@ -240,6 +247,7 @@ def main():
     add.add_argument("label")
     add.add_argument("path", help="CLI config directory containing auth.json or .credentials.json")
     add.add_argument("--email", help="Optional display email when the CLI does not report it")
+    add.add_argument("--plan", help="Optional subscription plan label to show on the account card")
     remove = subcommands.add_parser("remove")
     remove.add_argument("provider", choices=PROVIDERS)
     remove.add_argument("label")
@@ -250,7 +258,8 @@ def main():
     accounts = read_accounts()
     if args.command == "list":
         for account in accounts:
-            print(f"{account['provider']}\t{account['label']}\t{account['path']}")
+            suffix = f"\t{account['plan']}" if account.get("plan") else ""
+            print(f"{account['provider']}\t{account['label']}\t{account['path']}{suffix}")
     elif args.command == "add":
         path = str(Path(args.path).expanduser().resolve())
         if not Path(path).is_dir():
@@ -262,6 +271,10 @@ def main():
             if "@" not in args.email:
                 parser.error("Email must contain @")
             account["email"] = args.email
+        if args.plan is not None:
+            if not args.plan.strip():
+                parser.error("Plan must not be empty")
+            account["plan"] = args.plan.strip()
         accounts.append(account)
         write_accounts(accounts)
     else:

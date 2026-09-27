@@ -34,7 +34,13 @@ Cards show the account email when the CLI provides it. Codex supplies it from th
 python3 /home/levan/repos/quota-tray-gnome/quota.py add claude Work ~/.claude-work --email you@example.com
 ```
 
-Use either Claude `add` command above, depending on whether its CLI reports the email. The email is only a display label and is stored with the account path in your local config file.
+You can also add a plan label to show the subscription type on the card:
+
+```sh
+python3 /home/levan/repos/quota-tray-gnome/quota.py add claude Work ~/.claude-work --plan "Max 5x"
+```
+
+Use either Claude `add` command above, depending on whether its CLI reports the email. The email and plan are only display labels and are stored with the account path in your local config file.
 
 Run `python3 quota.py list` to see configured accounts and `python3 quota.py remove codex Work` to remove one from the indicator. `python3 quota.py poll` prints the same data the extension displays. Account settings live in `~/.config/quota-tray/accounts.json`.
 

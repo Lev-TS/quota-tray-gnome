@@ -241,8 +241,8 @@ export default class QuotaTray extends Extension {
         if (account.email)
             identity.add_child(this._text(account.email, 'quota-email'));
         heading.add_child(identity);
-        heading.add_child(this._text(selected ? 'ON BAR' : 'SHOW ON BAR',
-            `quota-select-label${selected ? ' quota-select-label-active' : ''}`));
+        if (account.plan)
+            heading.add_child(this._text(account.plan, 'quota-plan'));
         card.add_child(heading);
 
         if (account.error) {

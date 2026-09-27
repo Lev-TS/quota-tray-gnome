@@ -86,18 +86,20 @@ class QuotaTests(unittest.TestCase):
             self.assertEqual(quota.claude_email("/claude-work"), "work@example.com")
         self.assertEqual(command.call_args.kwargs["env"]["CLAUDE_CONFIG_DIR"], "/claude-work")
 
-    def test_manual_email_labels_a_custom_account(self):
+    def test_manual_email_and_plan_label_a_custom_account(self):
         with tempfile.TemporaryDirectory() as directory:
             with patch.object(quota, "CONFIG", Path(directory) / "accounts.json"):
                 quota.write_accounts([{"provider": "claude", "label": "Work", "path": directory,
-                                       "email": "work@example.com"}])
+                                       "email": "work@example.com", "plan": "Max 5x"}])
                 with patch.object(quota, "claude_email", return_value=None), patch.object(
                     quota, "claude_usage", return_value=[]
                 ):
                     output = io.StringIO()
                     with contextlib.redirect_stdout(output):
                         quota.poll()
-                self.assertEqual(json.loads(output.getvalue())["accounts"][0]["email"], "work@example.com")
+                account = json.loads(output.getvalue())["accounts"][0]
+                self.assertEqual(account["email"], "work@example.com")
+                self.assertEqual(account["plan"], "Max 5x")
 
 
 if __name__ == "__main__":
